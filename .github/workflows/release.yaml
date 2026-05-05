@@ -1,0 +1,32 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Build Plugin Package
+        run: python build_package.py
+
+      - name: Extract Tag Message
+        run: git tag -l --format='%(contents)' ${GITHUB_REF_NAME} > release_notes.md
+
+      - name: Upload Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release_notes.md
+          files: deeppcb-kicad-plugin-*.zip
