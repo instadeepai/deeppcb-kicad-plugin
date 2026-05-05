@@ -28,7 +28,7 @@ from ..utils import poll_board_status
 from ..helpers import DeepPCBClient, CreateBoardRequest
 from ..dialogs.api_key_dialog import ApiKeyDialog, load_api_key_from_config
 from ..dialogs.not_enough_credits_dialog import NotEnoughCreditsDialog
-from .dockable_panel import KiCadDockablePanel, get_icon_path, is_dark_theme
+from .dockable_panel import KiCadDockablePanel, get_icon_path
 
 
 class BoardCreationPanel(KiCadDockablePanel):
@@ -97,19 +97,6 @@ class BoardCreationPanel(KiCadDockablePanel):
             self.timeout_value_label, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 5
         )
         main_sizer.Add(timeout_sizer, 0, wx.ALL | wx.EXPAND, 5)
-
-        unlock_fee_label = wx.StaticText(
-            self,
-            label="Includes a 5 mins unlock fee. Non-refundable if you stop early.",
-        )
-        if is_dark_theme():
-            unlock_fee_label.SetForegroundColour(wx.Colour(180, 180, 180))
-        else:
-            unlock_fee_label.SetForegroundColour(wx.Colour(120, 120, 120))
-        font = unlock_fee_label.GetFont()
-        font.SetPointSize(font.GetPointSize() - 1)
-        unlock_fee_label.SetFont(font)
-        main_sizer.Add(unlock_fee_label, 0, wx.LEFT | wx.RIGHT, 10)
 
         # Schematics section
         sch_label_sizer = wx.BoxSizer(wx.HORIZONTAL)
