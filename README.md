@@ -2,6 +2,9 @@
 
 AI-powered PCB routing plugin for KiCad. Route your board automatically using the DeepPCB cloud engine — directly from the KiCad PCB editor.
 
+https://github.com/user-attachments/assets/198d1afe-c94c-4cfe-8b52-d0bf90b094cf
+
+
 
 ## Features
 
