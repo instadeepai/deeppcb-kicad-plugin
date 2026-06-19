@@ -100,7 +100,7 @@ class BoardCreationPanel(KiCadDockablePanel):
 
         # Schematics section
         sch_label_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sch_label = wx.StaticText(self, label="Schematics Files:")
+        sch_label = wx.StaticText(self, label="Schematics Files (optional):")
         sch_label_sizer.Add(sch_label, 0, wx.LEFT | wx.ALIGN_CENTER_VERTICAL, 5)
         sch_label_sizer.AddStretchSpacer(1)
 
@@ -151,7 +151,7 @@ class BoardCreationPanel(KiCadDockablePanel):
 
         self.start_btn = wx.Button(self, label="Start Routing")
         self.start_btn.Bind(wx.EVT_BUTTON, self.on_confirm)
-        self.start_btn.Enable(False)
+        self.start_btn.Enable(True)
         button_sizer.Add(self.start_btn, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
 
         main_sizer.Add(button_sizer, 0, wx.ALL | wx.EXPAND, 5)
@@ -335,7 +335,6 @@ class BoardCreationPanel(KiCadDockablePanel):
                 if path not in self.schematics_paths:
                     self.schematics_paths.append(path)
                     self.sch_listbox.Append(os.path.basename(path))
-            self.start_btn.Enable(self.sch_listbox.GetCount() > 0)
         dlg.Destroy()
 
     def on_remove_schematics(self, event):
@@ -344,7 +343,6 @@ class BoardCreationPanel(KiCadDockablePanel):
             self.schematics_paths.pop(idx)
             self.sch_listbox.Delete(idx)
         self.remove_sch_btn.Enable(self.sch_listbox.GetCount() > 0)
-        self.start_btn.Enable(self.sch_listbox.GetCount() > 0)
 
     def on_sch_selection_change(self, event):
         self.remove_sch_btn.Enable(len(self.sch_listbox.GetSelections()) > 0)
