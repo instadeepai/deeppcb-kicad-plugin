@@ -2,7 +2,7 @@ default_stages: [ "pre-commit", "commit-msg", "pre-push" ]
 default_language_version:
   python: python3
 
-repos:  
+repos:
   - repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.5.5
     hooks:
