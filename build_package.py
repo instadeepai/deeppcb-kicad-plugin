@@ -43,9 +43,9 @@ METADATA_TEMPLATE = {
     "author": {"name": "DeepPCB Team", "contact": {}},
     "license": "Apache-2.0",
     "resources": {
-        "homepage": "https://github.com/instadeep/deeppcb-kicad-plugin",
-        "issues": "https://github.com/instadeep/deeppcb-kicad-plugin/issues",
-        "repository": "https://github.com/instadeep/deeppcb-kicad-plugin",
+        "homepage": "https://github.com/instadeepai/deeppcb-kicad-plugin",
+        "issues": "https://github.com/instadeepai/deeppcb-kicad-plugin/issues",
+        "repository": "https://github.com/instadeepai/deeppcb-kicad-plugin",
     },
     "tags": ["pcbnew", "routing", "autorouter", "ai"],
     "versions": [

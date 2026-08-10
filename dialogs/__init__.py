@@ -25,6 +25,7 @@ from .session_dialog import (
     check_and_show_session_dialog,
     save_session_data,
 )
+from .rating_dialog import BoardRatingDialog
 
 __all__ = [
     "ApiKeyDialog",
@@ -34,4 +35,5 @@ __all__ = [
     "SessionDialog",
     "check_and_show_session_dialog",
     "save_session_data",
+    "BoardRatingDialog",
 ]

@@ -48,7 +48,7 @@ def create_session(retries: int = DEFAULT_RETRIES) -> requests.Session:
         total=retries,
         backoff_factor=RETRY_BACKOFF,
         status_forcelist=RETRY_STATUS_CODES,
-        allowed_methods=["GET", "POST", "PATCH"],
+        allowed_methods=["GET", "POST", "PATCH", "PUT"],
         raise_on_status=False,
     )
 
@@ -282,6 +282,31 @@ def resume_board(
 
     return make_request(
         method="PATCH", url=url, headers=build_headers(api_key), json_data=data
+    )
+
+
+def save_board_rating(
+    board_id: str,
+    swagger_url: str,
+    api_key: str,
+    speed_rating: int,
+    drc_rating: int,
+    solution_rating: int,
+    feedback: str,
+) -> Dict[str, Any]:
+    url = f"{swagger_url}/boards/{board_id}/rating"
+    data = {
+        "speedRating": speed_rating,
+        "drcRating": drc_rating,
+        "solutionRating": solution_rating,
+        "feedback": feedback,
+    }
+
+    return make_request(
+        method="PUT",
+        url=url,
+        headers=build_headers(api_key, "application/json"),
+        json_data=data,
     )
 
 

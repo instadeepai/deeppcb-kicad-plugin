@@ -34,7 +34,7 @@ https://github.com/user-attachments/assets/198d1afe-c94c-4cfe-8b52-d0bf90b094cf
 
 ### Install from File
 
-1. Download the latest `.zip` from the [Releases](https://github.com/instadeep/deeppcb-kicad-plugin/releases) page
+1. Download the latest `.zip` from the [Releases](https://github.com/instadeepai/deeppcb-kicad-plugin/releases) page
 2. In KiCad, open **Plugin and Content Manager**
 3. Click **Install from File...**
 4. Select the downloaded `.zip`

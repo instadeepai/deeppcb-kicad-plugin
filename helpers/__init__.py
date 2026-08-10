@@ -24,6 +24,7 @@ from .contracts import (
     BoardSubmitResponse,
     BoardStopResponse,
     BoardResumeResponse,
+    BoardRatingResponse,
     CreditBalanceResponse,
 )
 
@@ -39,5 +40,6 @@ __all__ = [
     "BoardSubmitResponse",
     "BoardStopResponse",
     "BoardResumeResponse",
+    "BoardRatingResponse",
     "CreditBalanceResponse",
 ]
