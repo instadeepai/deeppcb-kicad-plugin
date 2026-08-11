@@ -24,6 +24,7 @@ from .contracts import (
     BoardSubmitResponse,
     BoardStopResponse,
     BoardResumeResponse,
+    BoardRatingResponse,
     CreditBalanceResponse,
 )
 
@@ -153,6 +154,30 @@ class DeepPCBClient:
             status=result["status"],
             success=result.get("success", False),
             message=result["response"] if result.get("success") else "",
+            error=result.get("error")
+            or (result["response"] if not result.get("success") else None),
+        )
+
+    def rate_board(
+        self,
+        board_id: str,
+        speed_rating: int,
+        drc_rating: int,
+        solution_rating: int,
+        feedback: str,
+    ) -> BoardRatingResponse:
+        result = http_helpers.save_board_rating(
+            board_id=board_id,
+            swagger_url=self._base_url,
+            api_key=self._api_key,
+            speed_rating=speed_rating,
+            drc_rating=drc_rating,
+            solution_rating=solution_rating,
+            feedback=feedback,
+        )
+        return BoardRatingResponse(
+            status=result["status"],
+            success=result.get("success", False),
             error=result.get("error")
             or (result["response"] if not result.get("success") else None),
         )

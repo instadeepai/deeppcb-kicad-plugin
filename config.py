@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-APP_VERSION = "1.0.1"
+APP_VERSION = "1.1.0"
 
 BASE_URL = "https://app.deeppcb.ai"
 API_URL = "https://api.deeppcb.ai/api/v1"

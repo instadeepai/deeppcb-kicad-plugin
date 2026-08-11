@@ -140,6 +140,13 @@ class BoardResumeResponse:
 
 
 @dataclass
+class BoardRatingResponse:
+    status: int
+    success: bool
+    error: Optional[str] = None
+
+
+@dataclass
 class CreditBalanceResponse:
     status: int
     success: bool

@@ -34,6 +34,7 @@ from ..utils import (
 )
 from ..helpers import DeepPCBClient, DeepPCBBoard
 from ..dialogs.api_key_dialog import ApiKeyDialog, load_api_key_from_config
+from ..dialogs.rating_dialog import BoardRatingDialog
 from .dockable_panel import KiCadDockablePanel, get_icon_path, is_dark_theme
 
 
@@ -68,6 +69,7 @@ class BoardStatusPanel(KiCadDockablePanel):
         self.auto_refresh_active = False
         self.refresh_thread = None
         self._is_closing = False
+        self._rating_prompt_shown = False
         self._on_panel_closed_callback = on_panel_closed
         self._on_new_board_requested = on_new_board_requested
 
@@ -280,6 +282,13 @@ class BoardStatusPanel(KiCadDockablePanel):
         )
         button_sizer.Add(self.board_link, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
 
+        button_sizer.AddStretchSpacer(1)
+
+        self.rate_btn = wx.Button(self, label="★ Rate")
+        self.rate_btn.SetToolTip("Rate this board")
+        self.rate_btn.Bind(wx.EVT_BUTTON, self.on_rate)
+        button_sizer.Add(self.rate_btn, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
+
         main_sizer.Add(button_sizer, 0, wx.ALL | wx.EXPAND, 5)
 
         self.SetSizer(main_sizer)
@@ -356,6 +365,13 @@ class BoardStatusPanel(KiCadDockablePanel):
                     )
 
                 self.update_stop_resume_button()
+
+                if (
+                    board_status in ["Done", "Stopped"]
+                    and not self._rating_prompt_shown
+                ):
+                    self._rating_prompt_shown = True
+                    wx.CallAfter(self.show_rating_dialog)
             else:
                 error_msg = response.error or response.raw_response
                 wx.MessageBox(
@@ -467,6 +483,22 @@ class BoardStatusPanel(KiCadDockablePanel):
 
     def on_refresh(self, event):
         self.load_board_status()
+
+    def on_rate(self, event):
+        """Open the rating modal from the Rate button."""
+        self.show_rating_dialog()
+
+    def show_rating_dialog(self):
+        """Show the board rating modal. Used by the Rate button and by the
+        automatic one-time prompt when a board finishes."""
+        if self._is_closing or not self.board_id:
+            return
+        try:
+            dialog = BoardRatingDialog(self._frame, self.client, self.board_id)
+            dialog.ShowModal()
+            dialog.Destroy()
+        except Exception as e:
+            print(f"Error showing rating dialog: {str(e)}")
 
     def on_download(self, event):
         """Download and render selected solution."""
