@@ -24,12 +24,12 @@ from .dockable_panel import (
     get_kicad_aui_manager,
 )
 from .board_status_panel import BoardStatusPanel
-from .board_creation_panel import BoardCreationPanel
+from .chat_panel import ChatPanel
 
 __all__ = [
     "KiCadDockablePanel",
     "find_kicad_frame",
     "get_kicad_aui_manager",
     "BoardStatusPanel",
-    "BoardCreationPanel",
+    "ChatPanel",
 ]

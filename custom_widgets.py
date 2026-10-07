@@ -12,7 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 import wx
+
+
+def is_dark_theme():
+    """Detect if the current wx theme is dark based on background luminance."""
+    bg = wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW)
+    luminance = 0.299 * bg.Red() + 0.587 * bg.Green() + 0.114 * bg.Blue()
+    return luminance < 128
+
+
+def get_icon_path(assets_dir, base_name):
+    """Return the white icon variant for dark themes, grey for light themes."""
+    if is_dark_theme():
+        dark_path = os.path.join(assets_dir, f"{base_name}-white.png")
+        if os.path.exists(dark_path):
+            return dark_path
+    return os.path.join(assets_dir, f"{base_name}.png")
 
 
 class RoundedPanel(wx.Panel):

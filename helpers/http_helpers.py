@@ -14,6 +14,8 @@
 
 import json
 import os
+import subprocess
+import sys
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -41,6 +43,92 @@ def load_file_for_upload(
     return (field_name, (filename, content, content_type))
 
 
+PEM_FOOTER = "-----END CERTIFICATE-----"
+
+_keychain_pem: Optional[str] = None
+
+
+def macos_keychain_pem() -> str:
+    """Roots from the keychain search list, as one PEM blob.
+
+    OpenSSL cannot read the keychain, so on macOS the OS store is reachable
+    only by shelling out to `security`.
+    """
+    global _keychain_pem
+    if _keychain_pem is None:
+        try:
+            _keychain_pem = subprocess.run(
+                ["/usr/bin/security", "find-certificate", "-a", "-p"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            ).stdout
+        except Exception:
+            _keychain_pem = ""
+    return _keychain_pem
+
+
+def load_macos_keychain(ctx) -> None:
+    pem = macos_keychain_pem()
+    if not pem:
+        return
+    try:
+        ctx.load_verify_locations(cadata=pem)
+        return
+    except Exception:
+        pass
+    # One unparsable entry rejects the whole blob, which would drop the
+    # inspection root along with it, so retry a certificate at a time.
+    for chunk in pem.split(PEM_FOOTER):
+        if "BEGIN CERTIFICATE" not in chunk:
+            continue
+        try:
+            ctx.load_verify_locations(cadata=chunk + PEM_FOOTER + "\n")
+        except Exception:
+            continue
+
+
+def build_ssl_context():
+    """Trust the OS certificate store *and* the certifi bundle.
+
+    Supplying our own context makes requests skip its certifi-backed default
+    (see requests.adapters._urllib3_request_context), so certifi has to be
+    loaded here or public roots go missing. The OS store still has to be loaded
+    too: it is the only place a corporate TLS-inspection root lives, and on
+    Windows it also holds the intermediates the OS fetched on demand, which
+    OpenSSL cannot fetch for itself.
+    """
+    import ssl
+
+    # create_default_context() already loads the OS store on Windows. On macOS
+    # it reads OpenSSL's paths, never the keychain, so the store is loaded below.
+    ctx = ssl.create_default_context()
+    try:
+        import certifi
+
+        ctx.load_verify_locations(cafile=certifi.where())
+    except Exception:
+        # No certifi: fall back to the OS store alone.
+        pass
+    if sys.platform == "darwin":
+        load_macos_keychain(ctx)
+    return ctx
+
+
+class SystemCertAdapter(HTTPAdapter):
+    """HTTPAdapter that trusts the OS certificate store alongside certifi."""
+
+    def init_poolmanager(self, *args, **kwargs):
+        kwargs["ssl_context"] = build_ssl_context()
+        super().init_poolmanager(*args, **kwargs)
+
+    def proxy_manager_for(self, proxy, **proxy_kwargs):
+        # requests builds proxy pools separately, which would otherwise drop
+        # the context above and leave proxied requests with no CA bundle.
+        proxy_kwargs.setdefault("ssl_context", build_ssl_context())
+        return super().proxy_manager_for(proxy, **proxy_kwargs)
+
+
 def create_session(retries: int = DEFAULT_RETRIES) -> requests.Session:
     session = requests.Session()
 
@@ -52,7 +140,7 @@ def create_session(retries: int = DEFAULT_RETRIES) -> requests.Session:
         raise_on_status=False,
     )
 
-    adapter = HTTPAdapter(max_retries=retry_strategy)
+    adapter = SystemCertAdapter(max_retries=retry_strategy)
     session.mount("http://", adapter)
     session.mount("https://", adapter)
 
@@ -60,6 +148,7 @@ def create_session(retries: int = DEFAULT_RETRIES) -> requests.Session:
 
 
 _session: Optional[requests.Session] = None
+_no_retry_session: Optional[requests.Session] = None
 
 
 def get_session() -> requests.Session:
@@ -67,6 +156,22 @@ def get_session() -> requests.Session:
     if _session is None:
         _session = create_session()
     return _session
+
+
+def get_no_retry_session() -> requests.Session:
+    """Session that never replays a request.
+
+    An agent run that 502s at the gateway may already have executed
+    server-side tools, so a retry duplicates their effects.
+    """
+    global _no_retry_session
+    if _no_retry_session is None:
+        session = requests.Session()
+        adapter = SystemCertAdapter(max_retries=0)
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+        _no_retry_session = session
+    return _no_retry_session
 
 
 def make_request(
@@ -112,6 +217,18 @@ def make_request(
             "response": "Request timed out.",
             "success": False,
         }
+    except requests.exceptions.SSLError as e:
+        return {
+            "status": 495,
+            "response": (
+                f"Could not verify the TLS certificate of {url.split('/')[2]}. "
+                "The issuer is not in this machine's certificate store. If you "
+                "are behind a proxy that re-signs traffic, point "
+                "REQUESTS_CA_BUNDLE at its CA bundle and restart KiCad."
+                f"\n\n{e}"
+            ),
+            "success": False,
+        }
     except requests.exceptions.ConnectionError as e:
         if hasattr(e, "response") and e.response is not None:
             return {
@@ -121,7 +238,7 @@ def make_request(
             }
         return {
             "status": 503,
-            "response": "Connection failed. Check your internet connection.",
+            "response": f"Connection failed: {e}",
             "success": False,
         }
     except requests.exceptions.RequestException as e:
@@ -133,7 +250,7 @@ def make_request(
             }
         return {
             "status": 500,
-            "response": "Request failed. Check your internet connection.",
+            "response": f"Request failed: {e}",
             "success": False,
         }
 

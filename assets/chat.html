@@ -1,0 +1,402 @@
+<!doctype html>
+<!--
+Copyright 2026 InstaDeep Ltd. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --bg: #1e1e1e;
+    --fg: #f0f0f0;
+    --muted: #8a8a8a;
+    --user-bg: #6b3818;
+    --assistant-bg: #2a2a2a;
+    --accent: #F4751A;
+    --accent-hover: #d6630f;
+    --accent-fg: #ffffff;
+    --warn-bg: #5a3a1a;
+    --warn-fg: #ffd089;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #ffffff;
+      --fg: #1c1c1c;
+      --muted: #6a6a6a;
+      --user-bg: #fde2c8;
+      --assistant-bg: #f0f0f0;
+      --accent: #F4751A;
+      --accent-hover: #d6630f;
+      --accent-fg: #ffffff;
+      --warn-bg: #fff4d6;
+      --warn-fg: #6a4400;
+    }
+  }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 13px;
+  }
+  #messages { padding: 10px; overflow-y: auto; height: 100vh; box-sizing: border-box; }
+  .msg { margin-bottom: 10px; padding: 8px 10px; border-radius: 8px; word-wrap: break-word; }
+  .msg .body p { margin: 0 0 6px 0; }
+  .msg .body p:last-child { margin-bottom: 0; }
+  .msg .body h1, .msg .body h2, .msg .body h3, .msg .body h4 {
+    margin: 6px 0 4px 0; font-weight: 600;
+  }
+  .msg .body h1 { font-size: 16px; }
+  .msg .body h2 { font-size: 15px; }
+  .msg .body h3 { font-size: 14px; }
+  .msg .body h4 { font-size: 13px; }
+  .msg .body ul, .msg .body ol { margin: 4px 0 4px 18px; padding: 0; }
+  .msg .body li { margin: 2px 0; }
+  .msg .body code {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    background: rgba(255,255,255,0.10); padding: 1px 4px; border-radius: 3px; font-size: 12px;
+  }
+  .msg .body pre {
+    background: rgba(0,0,0,0.25); padding: 8px; border-radius: 4px; overflow-x: auto;
+    margin: 6px 0;
+  }
+  .msg .body pre code { background: transparent; padding: 0; font-size: 12px; }
+  .msg .body a { color: var(--accent); }
+  .msg .body table {
+    border-collapse: collapse;
+    margin: 8px 0;
+    font-size: 12px;
+    display: block;
+    overflow-x: auto;
+    max-width: 100%;
+  }
+  .msg .body th, .msg .body td {
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 4px 8px;
+    text-align: left;
+    vertical-align: top;
+  }
+  .msg .body th {
+    background: rgba(244, 117, 26, 0.18);
+    font-weight: 600;
+  }
+  @media (prefers-color-scheme: light) {
+    .msg .body th, .msg .body td { border-color: rgba(0,0,0,0.18); }
+    .msg .body th { background: rgba(244, 117, 26, 0.14); }
+  }
+  @media (prefers-color-scheme: light) {
+    .msg .body code { background: rgba(0,0,0,0.07); }
+    .msg .body pre { background: rgba(0,0,0,0.05); }
+  }
+  .user { background: var(--user-bg); }
+  .assistant { background: var(--assistant-bg); }
+  .role { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .tools { margin-top: 6px; }
+  .tool { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px;
+          background: rgba(255,255,255,0.05); padding: 6px 8px; border-radius: 4px;
+          margin-top: 4px; }
+  .suggest { background: var(--warn-bg); color: var(--warn-fg); border-radius: 6px;
+             padding: 8px; margin-top: 6px; }
+  .suggest h4 { margin: 0 0 6px 0; font-size: 12px; }
+  .suggest label { display: block; margin: 4px 0; }
+  .suggest-reason { display: block; margin-top: 2px; font-size: 11px; }
+  .actions { margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap; }
+  button { background: var(--accent); color: var(--accent-fg); border: 0;
+           padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;
+           transition: background 0.15s ease; }
+  button:hover { background: var(--accent-hover); }
+  button.secondary { background: transparent; color: var(--fg);
+                     border: 1px solid var(--muted); }
+  button.secondary:hover { background: rgba(244, 117, 26, 0.12); }
+  input[type="checkbox"] { accent-color: var(--accent); }
+  .status { color: var(--muted); font-style: italic; padding: 0 10px 6px 10px; }
+  .error { color: #ff6b6b; padding: 0 10px 6px 10px; font-size: 12px; }
+</style>
+</head>
+<body>
+<div id="messages"></div>
+<script>
+  const messagesEl = document.getElementById('messages');
+  const messages = {};
+  let statusEl = null;
+  let errorEl = null;
+
+  function post(msg) {
+    const body = JSON.stringify(msg);
+    try {
+      if (window.deeppcb && typeof window.deeppcb.postMessage === 'function') {
+        window.deeppcb.postMessage(body);
+        return;
+      }
+    } catch (e) {}
+    try {
+      if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
+        window.chrome.webview.postMessage(body);
+        return;
+      }
+    } catch (e) {}
+    try {
+      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.deeppcb) {
+        window.webkit.messageHandlers.deeppcb.postMessage(body);
+        return;
+      }
+    } catch (e) {}
+    window.location.href = 'deeppcb://msg/' + encodeURIComponent(body);
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function renderMarkdown(src) {
+    if (!src) return '';
+    let s = String(src);
+    s = s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const codeBlocks = [];
+    s = s.replace(/```([a-zA-Z0-9_+-]*)\n([\s\S]*?)```/g, function (_, _lang, code) {
+      const idx = codeBlocks.length;
+      codeBlocks.push('<pre><code>' + code + '</code></pre>');
+      return '\u0000CODE' + idx + '\u0000';
+    });
+    s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+    s = s.replace(
+      /(?:^|\n)(\|[^\n]+\|[ \t]*\n\|[ \t]*:?-+:?(?:[ \t]*\|[ \t]*:?-+:?)*[ \t]*\|[ \t]*\n(?:\|[^\n]+\|[ \t]*\n?)+)/g,
+      function (whole, block) {
+        const lines = block.trim().split('\n');
+        if (lines.length < 3) return whole;
+        const splitRow = function (row) {
+          return row.trim().replace(/^\||\|$/g, '').split('|').map(function (c) {
+            return c.trim();
+          });
+        };
+        const headers = splitRow(lines[0]);
+        const aligns = splitRow(lines[1]).map(function (cell) {
+          const lc = cell.startsWith(':');
+          const rc = cell.endsWith(':');
+          if (lc && rc) return 'center';
+          if (rc) return 'right';
+          if (lc) return 'left';
+          return '';
+        });
+        if (headers.length === 0) return whole;
+        let out = '\n\n<table><thead><tr>';
+        headers.forEach(function (h, i) {
+          const a = aligns[i] ? ' style="text-align:' + aligns[i] + '"' : '';
+          out += '<th' + a + '>' + h + '</th>';
+        });
+        out += '</tr></thead><tbody>';
+        for (let r = 2; r < lines.length; r++) {
+          const cells = splitRow(lines[r]);
+          out += '<tr>';
+          for (let i = 0; i < headers.length; i++) {
+            const c = cells[i] != null ? cells[i] : '';
+            const a = aligns[i] ? ' style="text-align:' + aligns[i] + '"' : '';
+            out += '<td' + a + '>' + c + '</td>';
+          }
+          out += '</tr>';
+        }
+        out += '</tbody></table>\n\n';
+        return out;
+      }
+    );
+    s = s.replace(/^######\s+(.+)$/gm, '<h4>$1</h4>');
+    s = s.replace(/^#####\s+(.+)$/gm, '<h4>$1</h4>');
+    s = s.replace(/^####\s+(.+)$/gm, '<h4>$1</h4>');
+    s = s.replace(/^###\s+(.+)$/gm, '<h3>$1</h3>');
+    s = s.replace(/^##\s+(.+)$/gm, '<h2>$1</h2>');
+    s = s.replace(/^#\s+(.+)$/gm, '<h1>$1</h1>');
+    s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/__([^_\n]+)__/g, '<strong>$1</strong>');
+    s = s.replace(/(^|[^\*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+    s = s.replace(/(^|[\s(])_([^_\n]+)_/g, '$1<em>$2</em>');
+    s = s.replace(/\[([^\]\n]+)\]\(([^)\s]+)\)/g, function (whole, text, url) {
+      if (!/^(https?:|mailto:)/i.test(url)) return whole;
+      const safe = url.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      return '<a href="' + safe + '" target="_blank" rel="noopener">' + text + '</a>';
+    });
+    s = s.replace(/(?:^[-*] .+\n?)+/gm, function (block) {
+      const items = block.trim().split('\n').map(function (l) {
+        return '<li>' + l.replace(/^[-*] /, '') + '</li>';
+      }).join('');
+      return '<ul>' + items + '</ul>';
+    });
+    s = s.replace(/(?:^\d+\. .+\n?)+/gm, function (block) {
+      const items = block.trim().split('\n').map(function (l) {
+        return '<li>' + l.replace(/^\d+\. /, '') + '</li>';
+      }).join('');
+      return '<ol>' + items + '</ol>';
+    });
+    s = s.split(/\n\n+/).map(function (para) {
+      const t = para.trim();
+      if (!t) return '';
+      if (/^<(h\d|ul|ol|pre|blockquote|div|table)/i.test(t)) return t;
+      return '<p>' + t.replace(/\n/g, '<br>') + '</p>';
+    }).join('\n');
+    s = s.replace(/\u0000CODE(\d+)\u0000/g, function (_, i) {
+      return codeBlocks[parseInt(i, 10)] || '';
+    });
+    return s;
+  }
+
+  function scrollToBottom() {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function addMessage(payload) {
+    const el = document.createElement('div');
+    el.className = 'msg ' + payload.role;
+    el.id = 'm-' + payload.id;
+    const body = document.createElement('div');
+    body.className = 'body';
+    body.innerHTML = renderMarkdown(payload.content || '');
+    const role = document.createElement('div');
+    role.className = 'role';
+    role.textContent = payload.role === 'user' ? 'You' : 'Cooper';
+    el.appendChild(role);
+    el.appendChild(body);
+    messagesEl.appendChild(el);
+    messages[payload.id] = { el, body, payload };
+    scrollToBottom();
+  }
+
+  function appendDelta(id, delta) {
+    const entry = messages[id];
+    if (!entry) return;
+    entry.payload.content = (entry.payload.content || '') + delta;
+    entry.body.innerHTML = renderMarkdown(entry.payload.content);
+    scrollToBottom();
+  }
+
+  function renderToolCalls(_entry, _toolCalls, _requiresApproval) {
+    // Tool calls are not displayed in the conversation thread.
+  }
+
+  function renderSuggestions(entry, suggestions) {
+    const wrap = document.createElement('div');
+    wrap.className = 'suggest';
+    const heading = document.createElement('h4');
+    heading.textContent = 'Suggested actions';
+    wrap.appendChild(heading);
+    const checks = [];
+    suggestions.forEach(function (s, idx) {
+      const label = document.createElement('label');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = true;
+      checks.push({ cb: cb, suggestion: s });
+      const title = document.createElement('span');
+      title.textContent = ' ' + (s.title || s.tool);
+      label.appendChild(cb);
+      label.appendChild(title);
+      if (s.description) {
+        const small = document.createElement('span');
+        small.className = 'suggest-reason';
+        small.textContent = s.description;
+        label.appendChild(small);
+      }
+      wrap.appendChild(label);
+    });
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+    const apply = document.createElement('button');
+    apply.textContent = 'Apply selected';
+    apply.onclick = function () {
+      const decisions = checks.map(function (c) {
+        let args = c.suggestion.args;
+        if (typeof args === 'string') {
+          try { args = JSON.parse(args); } catch (e) { args = {}; }
+        }
+        return { tool: c.suggestion.tool, args: args || {}, approved: c.cb.checked };
+      });
+      const approvedTitles = checks
+        .filter(function (c) { return c.cb.checked; })
+        .map(function (c) { return c.suggestion.title || c.suggestion.tool; });
+      post({
+        kind: 'applySuggestions',
+        messageId: entry.payload.id,
+        decisions: decisions,
+        approvedTitles: approvedTitles
+      });
+      actions.remove();
+    };
+    actions.appendChild(apply);
+    wrap.appendChild(actions);
+    entry.el.appendChild(wrap);
+    scrollToBottom();
+  }
+
+  function finalize(id, payload) {
+    const entry = messages[id];
+    if (!entry) return;
+    if (payload.content != null) {
+      entry.payload.content = payload.content;
+      entry.body.innerHTML = renderMarkdown(payload.content);
+    }
+    if (payload.toolCalls && payload.toolCalls.length) {
+      renderToolCalls(entry, payload.toolCalls, !!payload.requiresApproval);
+    }
+    if (payload.suggestions && payload.suggestions.length) {
+      renderSuggestions(entry, payload.suggestions);
+    }
+    scrollToBottom();
+  }
+
+  function setStatus(text) {
+    if (!text) {
+      if (statusEl) { statusEl.remove(); statusEl = null; }
+      return;
+    }
+    if (!statusEl) {
+      statusEl = document.createElement('div');
+      statusEl.className = 'status';
+      messagesEl.appendChild(statusEl);
+    }
+    statusEl.textContent = text;
+    scrollToBottom();
+  }
+
+  function setError(text) {
+    if (!text) {
+      if (errorEl) { errorEl.remove(); errorEl = null; }
+      return;
+    }
+    if (!errorEl) {
+      errorEl = document.createElement('div');
+      errorEl.className = 'error';
+      messagesEl.appendChild(errorEl);
+    }
+    errorEl.textContent = text;
+    scrollToBottom();
+  }
+
+  window.deeppcbApply = function (cmd) {
+    try { cmd = typeof cmd === 'string' ? JSON.parse(cmd) : cmd; } catch (e) { return; }
+    switch (cmd.op) {
+      case 'add': addMessage(cmd.message); break;
+      case 'delta': appendDelta(cmd.id, cmd.delta); break;
+      case 'finalize': finalize(cmd.id, cmd); break;
+      case 'status': setStatus(cmd.text); break;
+      case 'error': setError(cmd.text); break;
+      case 'clear':
+        messagesEl.innerHTML = '';
+        Object.keys(messages).forEach(function (k) { delete messages[k]; });
+        statusEl = null; errorEl = null;
+        break;
+    }
+  };
+</script>
+</body>
+</html>

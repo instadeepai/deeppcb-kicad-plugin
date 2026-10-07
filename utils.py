@@ -53,7 +53,7 @@ def download_and_save_board(
                 "message": "Board downloaded and saved successfully",
             }
         except Exception as e:
-            wx.MessageBox("Error saving file:", f"{e}", wx.OK | wx.ICON_ERROR)
+            wx.MessageBox(f"Error saving file: {e}", "Error", wx.OK | wx.ICON_ERROR)
             return {
                 "success": False,
                 "status": response.status,
@@ -256,6 +256,27 @@ def update_footprint_positions(board, footprint_dicts):
     return updated_count, not_found
 
 
+def _detach_track(board, track) -> None:
+    """Take a track off the board without giving Python ownership of it.
+
+    Remove() transfers the C++ object to its Python wrapper, so the track is
+    destroyed once that wrapper is collected - while KiCad's view, undo stack
+    and connectivity cache still point at it. The board handle degrades to a
+    bare SWIG pointer soon after, and every later render fails with "No active
+    board". RemoveNative() leaves ownership in C++; where it is missing,
+    clearing thisown has the same effect.
+    """
+    remove_native = getattr(board, "RemoveNative", None)
+    if remove_native is not None:
+        remove_native(track)
+        return
+    board.Remove(track)
+    try:
+        track.thisown = False
+    except Exception:
+        pass
+
+
 def load_and_render_board(solution_filename):
     from .parser import (
         parse_sexp_string,
@@ -282,7 +303,7 @@ def load_and_render_board(solution_filename):
 
         existing_tracks = list(board.GetTracks())
         for track in existing_tracks:
-            board.Remove(track)
+            _detach_track(board, track)
 
         # Create and add tracks from the solution file
         added_count = 0
