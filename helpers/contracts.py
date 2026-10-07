@@ -12,8 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from datetime import datetime, timezone
 from typing import Optional, List
 from dataclasses import dataclass, field
+
+
+# Board status vocabulary, shared by the panel and the sync policy.
+TERMINAL_STATES = ("Stopped", "Failed", "Done")
+ACTIVE_STATES = ("Running", "ReceivingRevisions", "Starting")
+PRE_RUN_STATES = ("Pending", "Created")
 
 
 @dataclass
@@ -29,13 +36,48 @@ class CreateBoardRequest:
     request_id: Optional[str] = None
 
 
+def _parse_iso(value: Optional[str]) -> Optional[datetime]:
+    """ISO 8601 to an aware datetime, or None if absent or unreadable."""
+    if not value:
+        return None
+    text = value[:-1] + "+00:00" if value.endswith("Z") else value
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+
+
 @dataclass
 class Revision:
     revision_number: int
+    created_on: Optional[datetime] = None
 
     @staticmethod
     def from_dict(data: dict) -> "Revision":
-        return Revision(revision_number=data.get("revisionNumber", 0))
+        # The revision carries no timestamp of its own; the one that moves
+        # when a draft is regenerated lives on its result.
+        result = data.get("result") or {}
+        return Revision(
+            revision_number=data.get("revisionNumber", 0),
+            created_on=_parse_iso(result.get("createdOn")),
+        )
+
+    def is_new_since(self, handled: Optional["Revision"]) -> bool:
+        """Whether this is content `handled` does not already cover.
+
+        A higher number is new. The same number can be new too: a draft is
+        regenerated in place, keeping its number and its id, and only the
+        timestamp moves. The number stays authoritative, so a missing or
+        out-of-order timestamp can never reorder revisions.
+        """
+        if handled is None:
+            return True
+        if self.revision_number != handled.revision_number:
+            return self.revision_number > handled.revision_number
+        if self.created_on and handled.created_on:
+            return self.created_on > handled.created_on
+        return False
 
 
 @dataclass
@@ -78,10 +120,21 @@ class DeepPCBBoard:
             raw=data,
         )
 
-    def get_latest_revision_number(self) -> Optional[int]:
+    def get_latest_revision(self) -> Optional[Revision]:
         if self.workflows and self.workflows[-1].revisions:
-            return self.workflows[-1].revisions[-1].revision_number
+            return self.workflows[-1].revisions[-1]
         return None
+
+    def get_revision(self, revision_number: int) -> Optional[Revision]:
+        for workflow in self.workflows:
+            for revision in workflow.revisions:
+                if revision.revision_number == revision_number:
+                    return revision
+        return None
+
+    def get_latest_revision_number(self) -> Optional[int]:
+        latest = self.get_latest_revision()
+        return latest.revision_number if latest else None
 
     def get_all_revision_numbers(self) -> List[int]:
         numbers = []

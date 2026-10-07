@@ -13,6 +13,8 @@
 # limitations under the License.
 
 from .client import DeepPCBClient
+from .chat_client import ChatClient, ChatAuthMissingError
+from .sse_consumer import SseConsumer, StreamCallbacks, normalize_tool_call
 from .contracts import (
     CreateBoardRequest,
     DeepPCBBoard,
@@ -30,6 +32,11 @@ from .contracts import (
 
 __all__ = [
     "DeepPCBClient",
+    "ChatClient",
+    "ChatAuthMissingError",
+    "SseConsumer",
+    "StreamCallbacks",
+    "normalize_tool_call",
     "CreateBoardRequest",
     "DeepPCBBoard",
     "Workflow",

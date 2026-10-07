@@ -19,25 +19,20 @@ This module provides a base class for creating dockable panels that integrate
 with KiCad's interface.
 """
 
-import os
 import wx
 import wx.aui
 
+# In custom_widgets so the dialogs can use them too (dialogs must not import
+# from panels); re-exported here, where the panels import them from.
+from ..custom_widgets import get_icon_path, is_dark_theme
 
-def is_dark_theme():
-    """Detect if the current wx theme is dark based on background luminance."""
-    bg = wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW)
-    luminance = 0.299 * bg.Red() + 0.587 * bg.Green() + 0.114 * bg.Blue()
-    return luminance < 128
-
-
-def get_icon_path(assets_dir, base_name):
-    """Return the white icon variant for dark themes, grey for light themes."""
-    if is_dark_theme():
-        dark_path = os.path.join(assets_dir, f"{base_name}-white.png")
-        if os.path.exists(dark_path):
-            return dark_path
-    return os.path.join(assets_dir, f"{base_name}.png")
+__all__ = [
+    "KiCadDockablePanel",
+    "find_kicad_frame",
+    "get_kicad_aui_manager",
+    "get_icon_path",
+    "is_dark_theme",
+]
 
 
 def find_kicad_frame():
@@ -53,19 +48,7 @@ def find_kicad_frame():
     Returns:
         The KiCad PCB Editor frame, or None if not found
     """
-    frame = wx.FindWindowByName("PcbFrame")
-    if frame:
-        try:
-            print(
-                f"[DeepPCB] find_kicad_frame: found PcbFrame, "
-                f"title='{frame.GetTitle().encode('ascii', errors='replace').decode('ascii')}'"
-            )
-        except Exception:
-            print("[DeepPCB] find_kicad_frame: found PcbFrame")
-        return frame
-
-    print("[DeepPCB] find_kicad_frame: 'PcbFrame' not found")
-    return None
+    return wx.FindWindowByName("PcbFrame")
 
 
 def get_kicad_aui_manager():
@@ -195,25 +178,25 @@ class KiCadDockablePanel(wx.Panel):
 
     def _on_aui_pane_close(self, event):
         pane = event.GetPane()
-        # Check if this event is for our pane
         if pane.name == self.PANEL_NAME:
-            # Save the layout before closing
-            self._save_pane_layout()
+            if not self._allow_pane_close(event):
+                event.Veto()
+                return
 
-            # Call our cleanup
+            self._save_pane_layout()
             self.on_panel_close()
 
-            # Remove from instances
             if self.PANEL_NAME in KiCadDockablePanel._instances:
                 del KiCadDockablePanel._instances[self.PANEL_NAME]
 
             event.Skip()
-
-            # Schedule destruction after event processing
             wx.CallAfter(self._destroy_after_close)
         else:
-            # Not our pane, let it propagate
             event.Skip()
+
+    def _allow_pane_close(self, event):
+        """Override to veto a close event (e.g. when a chat stream is active)."""
+        return True
 
     def _destroy_after_close(self):
         """Destroy the panel after the close event has been processed."""

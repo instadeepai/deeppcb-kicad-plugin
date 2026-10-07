@@ -29,20 +29,13 @@ def get_config_path():
 
 
 def load_api_key_from_config():
-    """Load the API key from the config file if it exists.
-
-    Returns:
-        str: The API key if found, empty string otherwise.
-    """
+    """Load the API key from the config file if it exists."""
     config_path = get_config_path()
-
     if config_path.exists():
         config = configparser.ConfigParser()
         config.read(config_path)
-
         if config.has_section("API") and config.has_option("API", "key"):
             return config.get("API", "key")
-
     return ""
 
 
@@ -91,8 +84,8 @@ class ApiKeyDialog(wx.Dialog):
         panel_sizer.Add(button_sizer, 0, wx.ALL | wx.EXPAND, 10)
 
         panel.SetSizer(panel_sizer)
-        panel.Layout()  # Force layout calculation
-        best_size = panel.GetBestSize()  # Get the optimal size
+        panel.Layout()
+        best_size = panel.GetBestSize()
 
         dialog_sizer = wx.BoxSizer(wx.VERTICAL)
         dialog_sizer.Add(panel, 1, wx.EXPAND | wx.ALL, 0)
