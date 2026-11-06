@@ -22,6 +22,8 @@ from urllib3.util.retry import Retry
 from typing import Dict, Any, Optional, Tuple
 import uuid
 
+from ..config import APP_VERSION
+
 
 DEFAULT_TIMEOUT = 30
 FILES_TIMEOUT = 60
@@ -260,6 +262,7 @@ def build_headers(api_key: str, content_type: Optional[str] = None) -> Dict[str,
         "accept": "*/*",
         "x-deeppcb-api-key": api_key,
         "x-client-type": "KicadPlugin",
+        "x-client-version": APP_VERSION,
     }
     if content_type:
         headers["Content-Type"] = content_type
@@ -283,15 +286,33 @@ def check_board_status(board_id: str, swagger_url: str, api_key: str) -> Dict[st
     return make_request(method="GET", url=url, headers=build_headers(api_key))
 
 
+DEFAULT_MAX_BATCH_TIMEOUT = 30
+
+
+def get_recommended_max_batch_timeout(
+    board_id: str, swagger_url: str, api_key: str
+) -> int:
+    url = f"{swagger_url}/boards/{board_id}/recommended-max-batch-timeout"
+    result = make_request(method="GET", url=url, headers=build_headers(api_key))
+    if not result.get("success"):
+        return DEFAULT_MAX_BATCH_TIMEOUT
+    try:
+        value = int(json.loads(result["response"]))
+    except (TypeError, ValueError):
+        return DEFAULT_MAX_BATCH_TIMEOUT
+    return value if value > 0 else DEFAULT_MAX_BATCH_TIMEOUT
+
+
 def submit_board(
     board_id: str, timeout: int, swagger_url: str, api_key: str, job_type: str
 ) -> Dict[str, Any]:
     url = f"{swagger_url}/boards/{board_id}/confirm"
     data = {
         "timeout": timeout,
-        "maxBatchTimeout": 30,
+        "maxBatchTimeout": get_recommended_max_batch_timeout(
+            board_id, swagger_url, api_key
+        ),
         "timeToLive": 300,
-        "maxInactivityWaitTimeout": 60,
         "jobType": job_type,
     }
 
@@ -391,7 +412,9 @@ def resume_board(
     url = f"{swagger_url}/boards/{board_id}/resume"
     data = {
         "timeout": timeout,
-        "maxBatchTimeout": 30,
+        "maxBatchTimeout": get_recommended_max_batch_timeout(
+            board_id, swagger_url, api_key
+        ),
         "timeToLive": 300,
         "responseBoardFormat": 1,
         "jobType": job_type,

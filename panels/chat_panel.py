@@ -59,9 +59,6 @@ INITIAL_ANALYSIS_PROMPT = (
     "actions I should take to prepare the board for routing."
 )
 
-# Auto-analysis seed prompts are internal plumbing, not shown in the transcript
-# (mirrors the web app's HIDDEN_PROMPTS). Includes the legacy short prompt so
-# conversations created before this change also hide their seed on reload.
 AUTO_ANALYSIS_PROMPTS = {
     INITIAL_ANALYSIS_PROMPT,
     "Analyze this board and give recommendations.",
@@ -326,10 +323,15 @@ class ChatPanel(KiCadDockablePanel):
             return
         if not self._ready_to_send():
             return
-        # Send the auto-analysis seed the way the web app does: no visible user
-        # bubble — the user sees only Cooper's reply. The prompt is also filtered
-        # from history on reload (see _render_history / AUTO_ANALYSIS_PROMPTS).
-        self._start_turn([{"role": "user", "content": self._initial_user_message}])
+        self._start_turn(
+            [
+                {
+                    "role": "user",
+                    "content": self._initial_user_message,
+                    "isSeedPrompt": True,
+                }
+            ]
+        )
 
     def set_on_assistant_turn_complete(self, callback) -> None:
         self._on_assistant_turn_complete = callback
@@ -367,8 +369,6 @@ class ChatPanel(KiCadDockablePanel):
                 (tc for tc in tool_calls if tc.get("name") == "suggest_actions"), None
             )
             if role == "user":
-                # Skip the auto-analysis seed prompt — internal plumbing, never
-                # shown in the transcript (mirrors the web app).
                 if content in AUTO_ANALYSIS_PROMPTS:
                     continue
                 self._renderer.add_user_message(content)
@@ -423,7 +423,7 @@ class ChatPanel(KiCadDockablePanel):
             return False
         return True
 
-    def _start_turn(self, messages: List[Dict[str, str]]) -> None:
+    def _start_turn(self, messages: List[Dict[str, Any]]) -> None:
         """Begin a new turn: fresh assistant bubble + content, first run."""
         self._accumulated_content = ""
         self._turn_tool_calls = []
@@ -442,7 +442,7 @@ class ChatPanel(KiCadDockablePanel):
         self._turn_finalized = False
         self._turn_saw_content = False
 
-    def _run_stream(self, messages: List[Dict[str, str]], resume: Any) -> None:
+    def _run_stream(self, messages: List[Dict[str, Any]], resume: Any) -> None:
         """Open one AG-UI run within the current turn (initial or a resume).
 
         The POST runs on a worker thread. It returns only once the server sends

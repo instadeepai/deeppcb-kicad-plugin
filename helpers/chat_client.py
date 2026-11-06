@@ -32,6 +32,7 @@ from typing import Any, Dict, List, Optional
 
 import requests
 
+from ..config import APP_VERSION
 from .http_helpers import get_session, get_no_retry_session, DEFAULT_TIMEOUT
 
 # On a streamed run the read timeout is silence tolerance, not total duration.
@@ -52,6 +53,7 @@ def _auth_headers(api_key: str, content_type: Optional[str] = None) -> Dict[str,
         "accept": "*/*",
         "x-deeppcb-api-key": api_key,
         "x-client-type": "KicadPlugin",
+        "x-client-version": APP_VERSION,
     }
     if content_type:
         headers["Content-Type"] = content_type
@@ -110,7 +112,7 @@ class ChatClient:
         self,
         board_id: str,
         conversation_id: str,
-        messages: List[Dict[str, str]],
+        messages: List[Dict[str, Any]],
         resume: Any = None,
     ) -> requests.Response:
         """Open a streaming AG-UI run.

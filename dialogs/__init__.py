@@ -31,6 +31,7 @@ from .session_dialog import (
 )
 from .board_creation_dialog import BoardCreationDialog
 from .rating_dialog import BoardRatingDialog
+from .update_dialog import show_update_dialog_if_available
 
 __all__ = [
     "ApiKeyDialog",
@@ -42,4 +43,5 @@ __all__ = [
     "save_session_data",
     "BoardCreationDialog",
     "BoardRatingDialog",
+    "show_update_dialog_if_available",
 ]

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.3.0"
 
 BASE_URL = "https://app.deeppcb.ai"
 API_URL = "https://api.deeppcb.ai/api/v1"
@@ -21,3 +21,9 @@ DEFAULT_TIMEOUT = 45
 BOARDS_URL = f"{BASE_URL}/boards"
 CREDITS_URL = f"{BASE_URL}/time-balance"
 INTEGRATION_URL = f"{BASE_URL}/integration"
+
+PLUGIN_REPO_URL = "https://github.com/instadeepai/deeppcb-kicad-plugin"
+PLUGIN_RELEASES_URL = f"{PLUGIN_REPO_URL}/releases"
+PLUGIN_LATEST_RELEASE_API_URL = (
+    "https://api.github.com/repos/instadeepai/deeppcb-kicad-plugin/releases/latest"
+)
