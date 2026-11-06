@@ -42,11 +42,7 @@ METADATA_TEMPLATE = {
     "type": "plugin",
     "author": {"name": "DeepPCB Team", "contact": {}},
     "license": "Apache-2.0",
-    "resources": {
-        "homepage": "https://github.com/instadeepai/deeppcb-kicad-plugin",
-        "issues": "https://github.com/instadeepai/deeppcb-kicad-plugin/issues",
-        "repository": "https://github.com/instadeepai/deeppcb-kicad-plugin",
-    },
+    "resources": {},  # Populated from config.py
     "tags": ["pcbnew", "routing", "autorouter", "ai"],
     "versions": [
         {
@@ -64,26 +60,40 @@ def get_script_dir() -> Path:
     return Path(__file__).parent.resolve()
 
 
-def get_version_from_config() -> str:
-    """Extract APP_VERSION from config.py."""
+def get_config_value(name: str) -> str:
+    """Extract a string constant such as APP_VERSION from config.py."""
     script_dir = get_script_dir()
     config_file = script_dir / "config.py"
 
     if config_file.exists():
         with open(config_file, "r", encoding="utf-8") as f:
             content = f.read()
-            # Match APP_VERSION = "x.x.x" or APP_VERSION = 'x.x.x'
-            match = re.search(r'APP_VERSION\s*=\s*["\']([^"\']+)["\']', content)
+            # Match NAME = "value" or NAME = 'value'
+            match = re.search(
+                rf'^{name}\s*=\s*["\']([^"\']+)["\']', content, re.MULTILINE
+            )
             if match:
                 return match.group(1)
 
     return "unknown"
 
 
+def get_version_from_config() -> str:
+    """Extract APP_VERSION from config.py."""
+    return get_config_value("APP_VERSION")
+
+
 def generate_metadata() -> dict:
     """Generate metadata dictionary with version from config.py."""
     metadata = METADATA_TEMPLATE.copy()
     metadata["versions"] = [v.copy() for v in METADATA_TEMPLATE["versions"]]
+
+    repo_url = get_config_value("PLUGIN_REPO_URL")
+    metadata["resources"] = {
+        "homepage": repo_url,
+        "issues": f"{repo_url}/issues",
+        "repository": repo_url,
+    }
 
     version = get_version_from_config()
     metadata["versions"][0]["version"] = version
@@ -93,6 +103,9 @@ def generate_metadata() -> dict:
 
 def should_exclude(path: Path) -> bool:
     """Check if a path should be excluded from the archive."""
+    if path == get_script_dir() / "tests":
+        return True
+
     exclude_patterns = [
         "__pycache__",
         ".pyc",

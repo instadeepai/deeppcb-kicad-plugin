@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import wx
+
 from .deeppcb_plugin import RouteBoard
+
+_wx_app = wx.GetApp()
+wx.CallAfter(lambda: None)
 
 RouteBoard().register()

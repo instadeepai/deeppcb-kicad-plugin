@@ -23,6 +23,7 @@ from .dialogs import (
     ApiKeyDialog,
     load_api_key_from_config,
     BoardCreationDialog,
+    show_update_dialog_if_available,
 )
 from .panels import (
     BoardStatusPanel,
@@ -46,6 +47,8 @@ class RouteBoard(pcbnew.ActionPlugin):
     def Run(self):
         if self._try_show_existing_panel():
             return
+
+        show_update_dialog_if_available()
 
         board = pcbnew.GetBoard()
         full_path = board.GetFileName()
